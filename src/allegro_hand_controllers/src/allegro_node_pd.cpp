@@ -127,6 +127,10 @@ void AllegroNodePD::setJointCallback(const sensor_msgs::JointState &msg) {
   ROS_WARN_COND(!control_hand_, "Setting control_hand_ to True because of "
                 "received JointState message");
   control_hand_ = true;
+  mutex->lock();
+  for (int i = 0; i < DOF_JOINTS; i++)
+    desired_joint_state.position[i] = DEGREES_TO_RADIANS(msg.position[i]);
+  mutex->unlock();
 }
 
 void AllegroNodePD::computeDesiredTorque() {

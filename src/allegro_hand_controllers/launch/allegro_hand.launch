@@ -49,6 +49,7 @@
        -pd
        -velsat
        -torque
+       -custom_pd
        *The default controller is 'grasp' which employs the included grasping library (libBHand). -->
 
   <arg name="POLLING" default="true"/> <!-- true, false for polling the CAN communication -->
