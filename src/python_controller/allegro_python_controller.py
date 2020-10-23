@@ -22,6 +22,11 @@ class AllegroController:
                                    5.0, -5.0, 50.0, 45.0,
                                    60.0, 25.0, 15.0, 45.0]) * np.pi / 180
 
+        self.grasp_pose = np.array([-0.116546, 1.088680, 1.235494, 1.020421,
+                                    0.126044, 0.967163, 1.377515, 0.786175,
+                                    0.340407, 1.195107, 1.154542, 0.982874,
+                                    1.403346, 0.459971, 0.020060, 1.784139])
+
         self.zero_pose = np.array([0.0, 0.0, 0.0, 0.0,
                                    0.0, 0.0, 0.0, 0.0,
                                    0.0, 0.0, 0.0, 0.0,
@@ -80,7 +85,7 @@ class AllegroController:
         # wait for the first subscribe
         rospy.Rate(10).sleep()
         # test every finger joint
-        for i in range(12, 13):
+        for i in range(16):
             for j in range(freq * 2):
                 desired_joint_state.position = self.zero_pose.copy()
                 self.log_desired_joint_position[i][j] = desired_joint_state.position[i]
@@ -97,16 +102,19 @@ class AllegroController:
 
 def main():
     hand_controller = AllegroController()
-    # desired_joint_state = JointState()
-    # # target joint positions
-    # # don't have to set target joint velocities and torques
-    # desired_joint_state.position = hand_controller.test_pose
-    # hand_controller.pub_joint_cmd(desired_joint_state)
+    desired_joint_state = JointState()
+    # target joint positions
+    # don't have to set target joint velocities and torques
+    desired_joint_state.position = hand_controller.grasp_pose
+    rate = rospy.Rate(50)  # 50hz
+    while not rospy.is_shutdown():
+        hand_controller.pub_joint_cmd(desired_joint_state)
+        rate.sleep()
 
     # step response test
-    hand_controller.step_response_test()
-    sio.savemat('step_response.mat', {'desired_joint_position': hand_controller.log_desired_joint_position,
-                                      'real_joint_position': hand_controller.log_real_joint_position})
+    # hand_controller.step_response_test()
+    # sio.savemat('step_response.mat', {'desired_joint_position': hand_controller.log_desired_joint_position,
+    #                                   'real_joint_position': hand_controller.log_real_joint_position})
 
 
 if __name__ == '__main__':

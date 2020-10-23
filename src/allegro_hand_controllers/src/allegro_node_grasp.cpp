@@ -56,8 +56,10 @@ void AllegroNodeGrasp::libCmdCallback(const std_msgs::String::ConstPtr &msg) {
     pBHand->SetJointDesiredPosition(desired_position);
     pBHand->SetMotionType(eMotionType_JOINT_PD);
   } else if (lib_cmd.compare("save") == 0) {
-    for (int i = 0; i < DOF_JOINTS; i++)
+    for (int i = 0; i < DOF_JOINTS; i++){
       desired_position[i] = current_position[i];
+      // printf("%f ", desired_position[i]);
+    }
   } else {
     ROS_WARN("Unknown commanded grasp: %s.", lib_cmd.c_str());
   }
