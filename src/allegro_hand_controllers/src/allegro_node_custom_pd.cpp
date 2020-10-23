@@ -16,6 +16,52 @@ AllegroNodeCustomPD::~AllegroNodeCustomPD() {
   delete pBHand;
 }
 
+// the gains are from http://wiki.wonikrobotics.com/AllegroHandWiki/index.php/PD_control_api
+// This function should be called after the function SetMotionType() is called.
+// Once SetMotionType() function is called, all gains are reset using the default values.
+void AllegroNodeCustomPD::setJointGains(){
+    if (!pBHand) return;
+    // double kp[16] = {
+	// 	500, 800, 900, 500,
+	// 	500, 800, 900, 500,
+	// 	500, 800, 900, 500,
+	// 	1000, 700, 600, 600
+	// };
+	// double kd[16] = {
+	// 	25, 50, 55, 40,
+	// 	25, 50, 55, 40,
+	// 	25, 50, 55, 40,
+	// 	50, 50, 50, 40
+	// };
+
+    // Default parameters from allegro_node_pd.cpp
+    // double kp[16] = {
+    //     600.0, 600.0, 600.0, 1000.0, 600.0, 600.0, 600.0, 1000.0,
+    //     600.0, 600.0, 600.0, 1000.0, 1000.0, 1000.0, 1000.0, 600.0
+    //     };
+
+    // double kd[16] = {
+    //     15.0, 20.0, 15.0, 15.0, 15.0, 20.0, 15.0, 15.0,
+    //     15.0, 20.0, 15.0, 15.0, 30.0, 20.0, 20.0, 15.0
+    //     };
+
+    // tuned by Wenbin, with the hand mounted on the default pillar, placed on the table.
+    double kp[16] = {
+        1000.0, 875.0, 875.0, 875.0, 
+        1000.0, 875.0, 875.0, 875.0, 
+        1000.0, 875.0, 875.0, 875.0, 
+        1000.0, 1000.0, 1000.0, 600.0
+        };
+
+    double kd[16] = {
+        20.0, 20.0, 15.0, 15.0, 
+        20.0, 20.0, 15.0, 15.0, 
+        20.0, 20.0, 15.0, 15.0, 
+        30.0, 20.0, 20.0, 15.0
+        };
+	pBHand->SetGainsEx(kp, kd);
+}
+
 // Called when a desired joint position message is received
 void AllegroNodeCustomPD::setJointCallback(const sensor_msgs::JointState &msg) {
   mutex->lock();
@@ -26,6 +72,7 @@ void AllegroNodeCustomPD::setJointCallback(const sensor_msgs::JointState &msg) {
 
   pBHand->SetJointDesiredPosition(desired_position);
   pBHand->SetMotionType(eMotionType_JOINT_PD);
+  setJointGains();
 }
 
 
@@ -54,6 +101,7 @@ void AllegroNodeCustomPD::initController(const std::string &whichHand) {
   }
   pBHand->SetTimeInterval(ALLEGRO_CONTROL_TIME_INTERVAL);
   pBHand->SetMotionType(eMotionType_NONE);
+  setJointGains();
 
   // sets initial desired pos at start pos for PD control
   for (int i = 0; i < DOF_JOINTS; i++)
@@ -61,6 +109,7 @@ void AllegroNodeCustomPD::initController(const std::string &whichHand) {
 
   pBHand->SetJointDesiredPosition(desired_position);
   pBHand->SetMotionType(eMotionType_JOINT_PD);
+  setJointGains();
 }
 
 void AllegroNodeCustomPD::doIt(bool polling) {

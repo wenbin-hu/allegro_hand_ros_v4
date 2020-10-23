@@ -1,0 +1,10 @@
+================Hand mounted on the default pillar=======================
+
+step_response_1023_1743.mat With default PD parameters. No tuning. No gravity compensation.
+
+step_response_1023_1808.mat With PD gains from http://wiki.wonikrobotics.com/AllegroHandWiki/index.php/PD_control_api No gravity compensation.
+
+step_response_1023_1817.mat With PD gains from allegro_node_pd.cpp. No gravity compensation.
+
+
+================Hand mounted on the default pillar=======================

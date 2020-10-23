@@ -27,6 +27,8 @@ class AllegroNodeCustomPD : public AllegroNode {
 
     void libCmdCallback(const std_msgs::String::ConstPtr &msg);
 
+    void setJointGains();
+
     void setJointCallback(const sensor_msgs::JointState &msg);
 
     void envelopTorqueCallback(const std_msgs::Float32 &msg);
