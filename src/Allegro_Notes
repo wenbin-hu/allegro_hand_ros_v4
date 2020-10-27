@@ -1,0 +1,70 @@
+Link for setting up ROS environment, including CAN driver set-up:
+http://wiki.wonikrobotics.com/AllegroHandWiki/index.php/ROS_Project
+-first test the libBhand-64
+
+Must install:
+sudo apt-get install libpopt-dev ros-kinetic-libpcan
+
+To install PCAN driver, follow the steps:
+https://github.com/simlabrobotics/allegro_hand_ros_v4
+
+Keyboard control test:
+1. Connect USB (power off the hand)
+2. cd allegro_hand_ros_v4
+3. source devel/setup.bash
+   roslaunch allegro_hand_controllers allegro_hand.launch HAND:=right
+4. Power on the hand
+5. Use keyboard to give commands.
+
+
+ROS related code files:
+
+1. allegro_node.cpp is for high level control. Subscribe and publish. Very important.
+	void AllegroNode::updateController is the 'step' function.
+	canDevice = new allegro::AllegroHandDrv() is for CAN communication with the hardware. For 	reading states and giving commands. 
+	e.g.  canDevice->setTorque(desired_torque);
+2. allegro_node_pd is for PD control of the fingers. It seems the PD gains in the yaml file is broken. Don't use this for now.
+	void AllegroNodePD::computeDesiredTorque(): Computing desired torque.
+	void AllegroNodePD::libCmdCallback(const std_msgs::String::ConstPtr &msg): Set 		desired_joint_state based on the keyboard input. e.g. 'home' position for 00000
+
+
+3. allegro_node_grasp  Another way to giving command to the hand.
+	pBHand->SetJointDesiredPosition(desired_position);
+	pBHand->GetJointTorque(desired_torque);
+	Needs more exploration.
+
+4. robot state topic: /allegroHand_0/joint_states
+example message: 
+header: 
+  seq: 91225
+  stamp: 
+    secs: 1603298633
+    nsecs: 674812123
+  frame_id: ''
+name: [joint_0.0, joint_1.0, joint_2.0, joint_3.0, joint_4.0, joint_5.0, joint_6.0, joint_7.0,
+  joint_8.0, joint_9.0, joint_10.0, joint_11.0, joint_12.0, joint_13.0, joint_14.0,
+  joint_15.0]
+position: [0.0044449208596688715, -0.1614432281070371, 0.813195852309258, 0.816146481960927, -0.011968160780570508, -0.1605576410303922, 0.814296064397746, 0.7948780131819844, 0.03772050671190722, -0.05974419045856618, 0.9033165083106661, 0.800978520486491, 0.8548406801575319, 0.36934585326300795, 0.2010156428406381, 0.7924490097847692]
+velocity: [-8.959151516669028, 6.079399819727756, 0.12398181675950148, -3.9700109823023526, -1.6129035753160785, 20.094235790916684, 51.26788359379342, -17.94327526100073, -105.43505799534617, -18.26491065591066, 34.50275527787965, -1.458316240011043, -50.1112982319189, 50.16806581353427, 11.962844880348541, 17.494850711437934]
+effort: [-0.0026798952917773656, -0.014627723375383515, -0.022098968281444534, -0.013931249807674366, 0.007484781302223421, -0.015582005866352283, -0.023289355437357048, -0.0010347717437126833, 0.03126852480979807, -0.028208718647202802, -0.02462860295048605, -0.004867300141677521, 0.033063229284442996, 0.06195730810968589, 0.04707335294525543, 0.0006631195871027009]
+
+This joint state is low-passed state. The relevant code is inside allegro_node.cpp updateController()
+
+2020_10_22 It seems the allegro_node_pd does NOT work well. I am using and modifying allegro_node_grasp which seems to be stable. I need to read more about BHand library(how to tune the pd_gains?).
+Found an interesting code about PD control: http://wiki.wonikrobotics.com/AllegroHandWiki/index.php/PD_control_api
+The code in above link tells how to modify the PD gains with Bhand library.
+It seems the pd gains in the yaml file is broken.
+
+5. There is a ratio parameter between the 'desired_torque' published in the ros topic 'states' and the
+real torque applied to the finger. You can check AllegroHandDrv.cpp line 239.
+
+For hand version 4(the one we are using), the parameter(_tau_cov_const) is 1200.
+However, after the discussion and analysis with Alex, we found out that the parameter should be 800, which is very weird,
+I need to find out why.
+
+Also, the unit of the torque is not correct. I need to figure out the correct unit, and convert it.
+After discussion with Alex, we agreed that we can use the 'desired_torque' as DRL feedback, but need to filter it and
+convert it with correct unit.
+
+According to the manual book, the max torque is 0.70(Nm). So I suppose the 'desired_torque' in ros topic is the actual
+torque.

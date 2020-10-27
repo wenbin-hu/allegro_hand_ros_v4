@@ -39,6 +39,11 @@ class AllegroController:
                                    5.0, -5.0, 50.0, 45.0,
                                    60.0, 25.0, 15.0, 45.0]) * np.pi / 180
 
+        self.hook_pose = np.array([0.0, -10.0, 90.0, 45.0,
+                                   0.0, -10.0, 90.0, 45.0,
+                                   5.0, -5.0, 90.0, 45.0,
+                                   60.0, 25.0, 15.0, 45.0]) * np.pi / 180
+
         self.grasp_pose = np.array([-0.116546, 1.088680, 1.235494, 1.020421,
                                     0.126044, 0.967163, 1.377515, 0.786175,
                                     0.340407, 1.195107, 1.154542, 0.982874,
@@ -119,7 +124,8 @@ class AllegroController:
     def grasp_response_test(self):
         freq = 50
         rate = rospy.Rate(freq)
-        duration = 5
+        duration = 20
+        target_pose = self.hook_pose.copy()
         desired_joint_state = []
         self.log_desired_joint_position = np.zeros([16, duration * freq])
         self.log_real_joint_position = np.zeros([16, duration * freq])
@@ -129,10 +135,10 @@ class AllegroController:
         # interpolate the desired joint position
         for i in range(duration * freq):
             temp_joint_state = JointState()
-            if i < 1.5 * freq:
-                temp_joint_state.position = self.grasp_pose.copy() / (1.5*freq) * (i+1)
+            if i < 1.0 * freq:
+                temp_joint_state.position = target_pose / (1.5*freq) * (i+1)
             else:
-                temp_joint_state.position = self.grasp_pose.copy()
+                temp_joint_state.position = target_pose
             desired_joint_state.append(temp_joint_state)
         # wait for the first subscribe
         rospy.Rate(10).sleep()
