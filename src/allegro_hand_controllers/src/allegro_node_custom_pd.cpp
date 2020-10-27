@@ -75,7 +75,7 @@ void AllegroNodeCustomPD::setJointCallback(const sensor_msgs::JointState &msg) {
 
   pBHand->SetJointDesiredPosition(desired_position);
   pBHand->SetMotionType(eMotionType_JOINT_PD);
-  // setJointGains();
+  setJointGains();
 }
 
 
@@ -104,7 +104,7 @@ void AllegroNodeCustomPD::initController(const std::string &whichHand) {
   }
   pBHand->SetTimeInterval(ALLEGRO_CONTROL_TIME_INTERVAL);
   pBHand->SetMotionType(eMotionType_NONE);
-  // setJointGains();
+  setJointGains();
 
   // sets initial desired pos at start pos for PD control
   for (int i = 0; i < DOF_JOINTS; i++)
@@ -112,15 +112,17 @@ void AllegroNodeCustomPD::initController(const std::string &whichHand) {
 
   pBHand->SetJointDesiredPosition(desired_position);
   pBHand->SetMotionType(eMotionType_JOINT_PD);
-  // setJointGains();
+  setJointGains();
 }
 
 void AllegroNodeCustomPD::doIt(bool polling) {
   if (polling) {
     ROS_INFO("Polling = true.");
+    // ros::Rate r(333);
     while (ros::ok()) {
       updateController();
       ros::spinOnce();
+      // r.sleep();
     }
   } else {
     ROS_INFO("Polling = false.");

@@ -15,6 +15,23 @@ class AllegroController:
         self.current_joint_state = JointState()
         self.log_desired_joint_position = 0
         self.log_real_joint_position = 0
+        self.log_desired_joint_torque = 0
+        self.log_real_joint_torque = 0
+        self.log_real_joint_velocity = 0
+
+        # the PD gains, need to be the same as the cpp code
+        self.kp = np.array([
+            500, 800, 900, 500,
+            500, 800, 900, 500,
+            500, 800, 900, 500,
+            1000, 700, 600, 600
+        ])
+        self.kd = np.array([
+            25, 50, 55, 40,
+            25, 50, 55, 40,
+            25, 50, 55, 40,
+            50, 50, 50, 40
+        ])
 
         # define the poses in radian.
         self.home_pose = np.array([0.0, -10.0, 45.0, 45.0,
@@ -99,22 +116,63 @@ class AllegroController:
                 self.pub_joint_cmd(desired_joint_state)
                 rate.sleep()
 
+    def grasp_response_test(self):
+        freq = 50
+        rate = rospy.Rate(freq)
+        duration = 5
+        desired_joint_state = []
+        self.log_desired_joint_position = np.zeros([16, duration * freq])
+        self.log_real_joint_position = np.zeros([16, duration * freq])
+        self.log_desired_joint_torque = np.zeros([16, duration * freq])
+        self.log_real_joint_torque = np.zeros([16, duration * freq])
+        self.log_real_joint_velocity = np.zeros([16, duration * freq])
+        # interpolate the desired joint position
+        for i in range(duration * freq):
+            temp_joint_state = JointState()
+            if i < 1.5 * freq:
+                temp_joint_state.position = self.grasp_pose.copy() / (1.5*freq) * (i+1)
+            else:
+                temp_joint_state.position = self.grasp_pose.copy()
+            desired_joint_state.append(temp_joint_state)
+        # wait for the first subscribe
+        rospy.Rate(10).sleep()
+        for j in range(freq * duration):
+            for i in range(16):
+                self.log_desired_joint_position[i][j] = desired_joint_state[j].position[i]
+                self.log_real_joint_torque[i][j] = self.kp[i] * (desired_joint_state[j].position[i] -
+                             self.current_joint_state.position[i]) # - self.kd[i] * self.current_joint_state.velocity[i]
+                self.log_real_joint_position[i][j] = self.current_joint_state.position[i]
+                self.log_desired_joint_torque[i][j] = self.current_joint_state.effort[i]
+                self.log_real_joint_velocity[i][j] = self.current_joint_state.velocity[i]
+                self.pub_joint_cmd(desired_joint_state[j])
+            rate.sleep()
+
 
 def main():
     hand_controller = AllegroController()
-    desired_joint_state = JointState()
-    # target joint positions
-    # don't have to set target joint velocities and torques
-    desired_joint_state.position = hand_controller.grasp_pose
-    rate = rospy.Rate(50)  # 50hz
-    while not rospy.is_shutdown():
-        hand_controller.pub_joint_cmd(desired_joint_state)
-        rate.sleep()
+
+    # A simple test
+    # desired_joint_state = JointState()
+    # # target joint positions
+    # # don't have to set target joint velocities and torques
+    # desired_joint_state.position = hand_controller.grasp_pose
+    # rate = rospy.Rate(50)  # 50hz
+    # while not rospy.is_shutdown():
+    #     hand_controller.pub_joint_cmd(desired_joint_state)
+    #     rate.sleep()
 
     # step response test
     # hand_controller.step_response_test()
     # sio.savemat('step_response.mat', {'desired_joint_position': hand_controller.log_desired_joint_position,
     #                                   'real_joint_position': hand_controller.log_real_joint_position})
+
+    # grasp response test
+    hand_controller.grasp_response_test()
+    sio.savemat('grasp_response.mat', {'desired_joint_position': hand_controller.log_desired_joint_position,
+                                       'real_joint_position': hand_controller.log_real_joint_position,
+                                       'desired_joint_torque': hand_controller.log_desired_joint_torque,
+                                       'real_joint_torque': hand_controller.log_real_joint_torque,
+                                       'real_joint_velocity':hand_controller.log_real_joint_velocity})
 
 
 if __name__ == '__main__':
