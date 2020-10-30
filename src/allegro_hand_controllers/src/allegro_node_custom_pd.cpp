@@ -118,11 +118,11 @@ void AllegroNodeCustomPD::initController(const std::string &whichHand) {
 void AllegroNodeCustomPD::doIt(bool polling) {
   if (polling) {
     ROS_INFO("Polling = true.");
-    // ros::Rate r(333);
+    ros::Rate r(333);
     while (ros::ok()) {
       updateController();
       ros::spinOnce();
-      // r.sleep();
+      r.sleep();
     }
   } else {
     ROS_INFO("Polling = false.");

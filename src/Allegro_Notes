@@ -60,11 +60,17 @@ real torque applied to the finger. You can check AllegroHandDrv.cpp line 239.
 
 For hand version 4(the one we are using), the parameter(_tau_cov_const) is 1200.
 However, after the discussion and analysis with Alex, we found out that the parameter should be 800, which is very weird,
-I need to find out why.
+I need to find out why --> I think in Bhand library, which is not open-sourced. The computation of PD used 800, to divide
+the desired torque.
 
 Also, the unit of the torque is not correct. I need to figure out the correct unit, and convert it.
+-> I think the 'desired_torque' is the actual torque.
+
 After discussion with Alex, we agreed that we can use the 'desired_torque' as DRL feedback, but need to filter it and
 convert it with correct unit.
 
 According to the manual book, the max torque is 0.70(Nm). So I suppose the 'desired_torque' in ros topic is the actual
 torque.
+
+6. I changed the doIt function in allegro_node_custom_pd. I added the rate(333) at 333Hz. Now the computed velocity is
+stable.
