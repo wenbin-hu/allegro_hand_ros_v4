@@ -3,6 +3,7 @@ from sensor_msgs.msg import JointState
 import numpy as np
 import scipy.io as sio
 import time
+from datetime import datetime
 
 
 class AllegroController:
@@ -18,6 +19,7 @@ class AllegroController:
         self.log_real_joint_position = 0
         self.log_desired_joint_torque = 0
         self.log_computed_joint_torque = 0
+        self.log_computed_joint_torque_vel = 0
         self.log_real_joint_velocity = 0
 
         # the PD gains, need to be the same as the cpp code
@@ -75,6 +77,11 @@ class AllegroController:
                                    0.0, 0.0, 0.0, 0.0,
                                    0.0, 0.0, 0.0, 10.0]) * np.pi / 180
 
+        self.three_finger_grasp_pose = np.array([-0.093, 0.914, 1.315, 0.815,
+                                                 0.024, 0.922, 1.247, 0.757,
+                                                 0.042, -0.152, -0.027, -0.011,
+                                                 1.470, 0.122, 0.165, 1.446])
+
         # define the joint limits
         self.joint_lower_limit = np.array([-0.47, -0.196, -0.174, -0.227,
                                            -0.47, -0.196, -0.174, -0.227,
@@ -117,16 +124,16 @@ class AllegroController:
                 rate.sleep()
             for k in range(freq * 2):
                 desired_joint_state.position[i] = self.zero_pose[i] + 5 * np.pi / 180
-                self.log_desired_joint_position[i][freq*1+k] = desired_joint_state.position[i]
-                self.log_real_joint_position[i][freq*1+k] = self.current_joint_state.position[i]
+                self.log_desired_joint_position[i][freq * 1 + k] = desired_joint_state.position[i]
+                self.log_real_joint_position[i][freq * 1 + k] = self.current_joint_state.position[i]
                 self.pub_joint_cmd(desired_joint_state)
                 rate.sleep()
 
     def grasp_response_test(self):
         freq = 50
         rate = rospy.Rate(freq)
-        duration = 4
-        target_pose = self.grasp_pose.copy()
+        duration = 6
+        target_pose = self.three_finger_grasp_pose.copy()
         desired_joint_state = []
         self.log_desired_joint_position = np.zeros([16, duration * freq])
         self.log_real_joint_position = np.zeros([16, duration * freq])
@@ -144,7 +151,7 @@ class AllegroController:
                 temp_joint_state.position = np.array(self.current_joint_state.position)
             # closing phase
             elif 1.0 * freq <= i < 2.5 * freq:
-                temp_joint_state.position = target_pose / (1.5*freq) * (i - 1.0*freq + 1)
+                temp_joint_state.position = target_pose / (1.5 * freq) * (i - 1.0 * freq + 1)
             # holding phase
             else:
                 temp_joint_state.position = target_pose
@@ -155,9 +162,11 @@ class AllegroController:
             for i in range(16):
                 self.log_desired_joint_position[i][j] = desired_joint_state[j].position[i]
                 self.log_computed_joint_torque[i][j] = self.kp[i] * (desired_joint_state[j].position[i] -
-                             self.current_joint_state.position[i]) # - self.kd[i] * self.current_joint_state.velocity[i]
+                                                                     self.current_joint_state.position[
+                                                                         i])  # - self.kd[i] * self.current_joint_state.velocity[i]
                 self.log_computed_joint_torque_vel[i][j] = self.kp[i] * (desired_joint_state[j].position[i] -
-                         self.current_joint_state.position[i]) - self.kd[i] * self.current_joint_state.velocity[i]
+                                                                         self.current_joint_state.position[i]) - \
+                                                           self.kd[i] * self.current_joint_state.velocity[i]
                 self.log_real_joint_position[i][j] = self.current_joint_state.position[i]
                 self.log_desired_joint_torque[i][j] = self.current_joint_state.effort[i]
                 self.log_real_joint_velocity[i][j] = self.current_joint_state.velocity[i]
@@ -185,12 +194,13 @@ def main():
 
     # grasp response test
     hand_controller.grasp_response_test()
-    sio.savemat('grasp_response.mat', {'desired_joint_position': hand_controller.log_desired_joint_position,
-                                       'real_joint_position': hand_controller.log_real_joint_position,
-                                       'desired_joint_torque': hand_controller.log_desired_joint_torque,
-                                       'computed_joint_torque': hand_controller.log_computed_joint_torque,
-                                       'computed_joint_torque_vel': hand_controller.log_computed_joint_torque_vel,
-                                       'real_joint_velocity':  hand_controller.log_real_joint_velocity})
+    sio.savemat('data/grasp_response' + datetime.now().strftime('%Y_%m_%d_%H.%M.%S') + '.mat',
+                {'desired_joint_position': hand_controller.log_desired_joint_position,
+                 'real_joint_position': hand_controller.log_real_joint_position,
+                 'desired_joint_torque': hand_controller.log_desired_joint_torque,
+                 'computed_joint_torque': hand_controller.log_computed_joint_torque,
+                 'computed_joint_torque_vel': hand_controller.log_computed_joint_torque_vel,
+                 'real_joint_velocity': hand_controller.log_real_joint_velocity})
 
 
 if __name__ == '__main__':

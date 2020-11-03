@@ -2,7 +2,7 @@
 clear;
 clc;
 close all;
-load('grasp_response.mat');
+load('data/grasp_response2020_11_03_15.20.35.mat');
 
 %% plot the desired joint position and real joint position
 figure;hold on;title('joint position response');
@@ -10,7 +10,7 @@ set(gca, 'FontSize', 20);
 time = 0:0.02:0.02*(length(desired_joint_position)-1);
 for i = 1:16
     subplot(4,4,i);
-    plot(time, desired_joint_position(i,:), 'r', ...
+    plot(time, desired_joint_position(i,:), 'r', ...`
     time, real_joint_position(i,:), 'b', 'linewidth', 2.5);
 end
 
@@ -31,7 +31,7 @@ set(gca, 'FontSize', 20);
 time = 0:0.02:0.02*(length(desired_joint_position)-1);
 for i = 1:16
     subplot(4,4,i);
-    plot(time, real_joint_torque(i,:), 'b', 'linewidth', 2.5);
+    plot(time, computed_joint_torque(i,:), 'b', 'linewidth', 2.5);
 end
 
 %% plot desired torque command from Bhand and torque I computed
