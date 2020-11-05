@@ -2,7 +2,7 @@
 clear;
 clc;
 close all;
-load('data/grasp_response2020_11_03_15.20.35.mat');
+load('data/grasp_response2020_11_03_15.21.37.mat');
 
 %% plot the desired joint position and real joint position
 figure;hold on;title('joint position response');
