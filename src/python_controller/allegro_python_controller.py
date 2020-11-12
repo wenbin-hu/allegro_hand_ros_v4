@@ -4,6 +4,7 @@ import numpy as np
 import scipy.io as sio
 import time
 from datetime import datetime
+from scipy.io import loadmat, savemat
 
 
 class AllegroController:
@@ -27,7 +28,7 @@ class AllegroController:
             500, 800, 900, 500,
             500, 800, 900, 500,
             500, 800, 900, 500,
-            1000, 700, 600, 600
+            1500, 700, 600, 600
         ])
         self.kd = np.array([
             25, 50, 55, 40,
@@ -77,10 +78,25 @@ class AllegroController:
                                    0.0, 0.0, 0.0, 0.0,
                                    0.0, 0.0, 0.0, 10.0]) * np.pi / 180
 
-        self.three_finger_grasp_pose = np.array([-0.093, 0.914, 1.315, 0.815,
+        self.three_finger_precise_grasp_pose = np.array([-0.093, 0.914, 1.315, 0.815,
                                                  0.024, 0.922, 1.247, 0.757,
                                                  0.042, -0.152, -0.027, -0.011,
                                                  1.470, 0.122, 0.165, 1.446])
+        self.three_finger_power_grasp_pose = np.array([0.135, 1.317, 1.644, 0.611,
+                                                        0.153, 1.241, 1.511, 0.542,
+                                                        -0.016, 0.025, 0.005, 0.012,
+                                                        1.353, 0.090, 0.421, 1.061])
+        self.three_finger_precise_grasp_pose_1 = np.array(
+            [-0.056, 0.130, 1.764, 0.542,
+             -0.056, 0.130, 1.764, 0.542,
+             0.010, 0.033, -0.010, 0.077,
+             1.160, 0.511, 0.705, 0.979])
+
+        self.two_finger_pinch = np.array(
+            [0.362, 0.868, 1.044, 0.943,
+             0.043, 0.025, 0.002, 0.051,
+             0.050, 0.031, 0.014, 0.011,
+             0.982, 0.177, 0.420, 1.051])
 
         # define the joint limits
         self.joint_lower_limit = np.array([-0.47, -0.196, -0.174, -0.227,
@@ -133,7 +149,7 @@ class AllegroController:
         freq = 50
         rate = rospy.Rate(freq)
         duration = 8
-        target_pose = self.three_finger_grasp_pose.copy()
+        target_pose = self.two_finger_pinch.copy()
         desired_joint_state = []
         self.log_desired_joint_position = np.zeros([16, duration * freq])
         self.log_real_joint_position = np.zeros([16, duration * freq])
