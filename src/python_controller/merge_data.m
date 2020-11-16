@@ -3,8 +3,8 @@ clear;
 clc;
 close all;
 %% define the target file folder and output file name
-Folder = 'data/two_finger_pinch';
-saved_file_name = 'merged_two_finger_pinch.mat';
+Folder = 'data/two_finger_pinch_sliding';
+saved_file_name = 'merged_two_finger_pinch_sliding.mat';
 %% merge the data from different mat files
 FileList = dir(fullfile(Folder, '*.mat'));  % List of all MAT files
 allData  = struct();

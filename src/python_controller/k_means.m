@@ -3,8 +3,8 @@ clear;
 clc;
 close all;
 % load('data/grasp_response2020_11_12_15.52.30.mat');
-raw_data = load('data/two_finger_pinch/merged_two_finger_pinch.mat');
-trail_length = 400;
+raw_data = load('data/two_finger_pinch/merged_two_finger_pinch_with_gradient.mat');
+trail_length = 400; % every trail has 400 time-steps
 
 %% for three-fingered grasp, drop out the data of little finger
 data_name_list = fieldnames(raw_data);
@@ -73,7 +73,15 @@ end
 data = data';
 
 % torque, position, torque', position'
-
+% data = zeros(size(desired_joint_torque,1)*time_window*4, ...
+%             size(desired_joint_torque,2)-time_window+1);
+% for i = 1:size(data,2)
+%     data(:,i) = [reshape(desired_joint_torque(:,i:i+time_window-1), size(data,1)/4, 1);...
+%         reshape(real_joint_position(:,i:i+time_window-1), size(data,1)/4, 1);...
+%         reshape(desired_joint_torque_gradient(:,i:i+time_window-1), size(data,1)/4, 1);...
+%         reshape(real_joint_velocity(:,i:i+time_window-1), size(data,1)/4, 1)];
+% end
+% data = data';
 
 [idx, cluster_centre, sum_distance, distance] = kmeans(data, num_cluster,... 
                           'Display', 'final',...
@@ -100,23 +108,81 @@ for i = 1:size(Idx, 1) - 1
 end
 
 %% plot the results; at one of the trials
-trail = 20; % in 2-finger pinch experiments there are 20 trials
+trail = size(desired_joint_torque, 2) / trail_length; % in 2-finger pinch experiments there are 20 trials
 trail_desired_joint_torque = desired_joint_torque(:, (trail-1)*trail_length+1:trail*trail_length);
 trail_real_joint_position = real_joint_position(:, (trail-1)*trail_length+1:trail*trail_length);
+trail_desired_joint_torque_gradient = desired_joint_torque_gradient(:, (trail-1)*trail_length+1:trail*trail_length);
+trail_real_joint_velocity = real_joint_velocity(:, (trail-1)*trail_length+1:trail*trail_length);
 trail_ch_pos = ch_pos(ch_pos>(trail-1)*trail_length & ch_pos<trail*trail_length);
 % manual remove the change position between two trails. This is caused by
 % including data from two neighbour trails into one sliding window.
 % This bug should be fixed.
 trail_ch_pos = trail_ch_pos(2:3) - (trail-1)*trail_length - 1;
+% trail_ch_pos = trail_ch_pos - (trail-1)*trail_length - 1;
 trail_time = 0:0.02:0.02*(length(trail_desired_joint_torque)-1);
 
 % plot the torque
-figure;hold on;sgtitle('normalized desired joint torque');
+figure;hold on;sgtitle('normalized desired joint torque, position, torque'', position''');
 set(gca, 'FontSize', 20);
 % set(groot,'defaultfigureposition',[400 250 900 750]);
 for i = 1:size(trail_desired_joint_torque, 1)
-    subplot(size(trail_desired_joint_torque, 1)/4,4,i);
+    % joint torque
+    subplot(4,size(trail_desired_joint_torque, 1),i);
     plot(trail_time, trail_desired_joint_torque(i,:), 'r','linewidth', 2.5);
+    yl = ylim;
+    xl = xlim;
+    patch([xl(1), xl(1), trail_time(trail_ch_pos(1)), trail_time(trail_ch_pos(1)), xl(1)], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.1);
+    for j = 1:length(trail_ch_pos)-1
+        patch([trail_time(trail_ch_pos(j)), trail_time(trail_ch_pos(j)), ...
+            trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1))], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.2);
+    end    
+    patch([trail_time(trail_ch_pos(end)), trail_time(trail_ch_pos(end)), xl(2), xl(2), trail_time(trail_ch_pos(end))], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.3);
+    
+    % joint position
+    subplot(4,size(trail_desired_joint_torque, 1),i + size(trail_desired_joint_torque, 1));
+    plot(trail_time, trail_real_joint_position(i,:), 'r','linewidth', 2.5);
+    yl = ylim;
+    xl = xlim;
+    patch([xl(1), xl(1), trail_time(trail_ch_pos(1)), trail_time(trail_ch_pos(1)), xl(1)], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.1);
+    for j = 1:length(trail_ch_pos)-1
+        patch([trail_time(trail_ch_pos(j)), trail_time(trail_ch_pos(j)), ...
+            trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1))], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.2);
+    end    
+    patch([trail_time(trail_ch_pos(end)), trail_time(trail_ch_pos(end)), xl(2), xl(2), trail_time(trail_ch_pos(end))], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.3);
+    
+    % joint torque'
+    subplot(4,size(trail_desired_joint_torque, 1),i + 2*size(trail_desired_joint_torque, 1));
+    plot(trail_time, trail_desired_joint_torque_gradient(i,:), 'r','linewidth', 2.5);
+    yl = ylim;
+    xl = xlim;
+    patch([xl(1), xl(1), trail_time(trail_ch_pos(1)), trail_time(trail_ch_pos(1)), xl(1)], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.1);
+    for j = 1:length(trail_ch_pos)-1
+        patch([trail_time(trail_ch_pos(j)), trail_time(trail_ch_pos(j)), ...
+            trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1))], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.2);
+    end    
+    patch([trail_time(trail_ch_pos(end)), trail_time(trail_ch_pos(end)), xl(2), xl(2), trail_time(trail_ch_pos(end))], ...
+        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+        'black', 'FaceColor', 'green', 'FaceAlpha', 0.3);
+    
+    % joint velocity
+    subplot(4,size(trail_desired_joint_torque, 1),i + 3*size(trail_desired_joint_torque, 1));
+    plot(trail_time, trail_real_joint_velocity(i,:), 'r','linewidth', 2.5);
     yl = ylim;
     xl = xlim;
     patch([xl(1), xl(1), trail_time(trail_ch_pos(1)), trail_time(trail_ch_pos(1)), xl(1)], ...
@@ -134,66 +200,57 @@ for i = 1:size(trail_desired_joint_torque, 1)
 end
 
 % plot the postion
-figure;hold on;sgtitle('normalized real joint position');
-set(gca, 'FontSize', 20);
-set(groot,'defaultfigureposition',[400 250 900 750]);
-for i = 1:size(trail_desired_joint_torque, 1)
-    subplot(size(trail_desired_joint_torque, 1)/4,4,i);
-    plot(trail_time, trail_real_joint_position(i,:), 'r','linewidth', 2.5);
-    yl = ylim;
-    xl = xlim;
-    patch([xl(1), xl(1), trail_time(trail_ch_pos(1)), trail_time(trail_ch_pos(1)), xl(1)], ...
-        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
-        'black', 'FaceColor', 'green', 'FaceAlpha', 0.1);
-    for j = 1:length(trail_ch_pos)-1
-        patch([trail_time(trail_ch_pos(j)), trail_time(trail_ch_pos(j)), ...
-            trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1))], ...
-        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
-        'black', 'FaceColor', 'green', 'FaceAlpha', 0.2);
-    end    
-    patch([trail_time(trail_ch_pos(end)), trail_time(trail_ch_pos(end)), xl(2), xl(2), trail_time(trail_ch_pos(end))], ...
-        [yl(1), yl(2), yl(2), yl(1), yl(1)],...
-        'black', 'FaceColor', 'green', 'FaceAlpha', 0.3);
-end
+% figure;hold on;sgtitle('normalized real joint position');
+% set(gca, 'FontSize', 20);
+% set(groot,'defaultfigureposition',[400 250 900 750]);
+% for i = 1:size(trail_desired_joint_torque, 1)
+%     subplot(size(trail_desired_joint_torque, 1)/4,4,i);
+%     plot(trail_time, trail_real_joint_position(i,:), 'r','linewidth', 2.5);
+%     yl = ylim;
+%     xl = xlim;
+%     patch([xl(1), xl(1), trail_time(trail_ch_pos(1)), trail_time(trail_ch_pos(1)), xl(1)], ...
+%         [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+%         'black', 'FaceColor', 'green', 'FaceAlpha', 0.1);
+%     for j = 1:length(trail_ch_pos)-1
+%         patch([trail_time(trail_ch_pos(j)), trail_time(trail_ch_pos(j)), ...
+%             trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1)), trail_time(trail_ch_pos(j+1))], ...
+%         [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+%         'black', 'FaceColor', 'green', 'FaceAlpha', 0.2);
+%     end    
+%     patch([trail_time(trail_ch_pos(end)), trail_time(trail_ch_pos(end)), xl(2), xl(2), trail_time(trail_ch_pos(end))], ...
+%         [yl(1), yl(2), yl(2), yl(1), yl(1)],...
+%         'black', 'FaceColor', 'green', 'FaceAlpha', 0.3);
+% end
 
 %% 3-D view of the results within one trail
 trail = 20; % in 2-finger pinch experiments there are 20 trials
-trail_desired_joint_torque = desired_joint_torque(:, (trail-1)*trail_length+1:trail*trail_length);
-trail_real_joint_position = real_joint_position(:, (trail-1)*trail_length+1:trail*trail_length);
+trail_data = [desired_joint_torque; real_joint_position; desired_joint_torque_gradient; real_joint_velocity];
+trail_data = trail_data(:, (trail-1)*trail_length+1:trail*trail_length);
 trail_ch_pos = ch_pos(ch_pos>(trail-1)*trail_length & ch_pos<trail*trail_length);
 % manual remove the change position between two trails. This is caused by
 % including data from two neighbour trails into one sliding window.
 % This bug should be fixed.
-trail_ch_pos = trail_ch_pos(2:3) - (trail-1)*trail_length - 1;
-trail_time = 0:0.02:0.02*(length(trail_desired_joint_torque)-1);
+% trail_ch_pos = trail_ch_pos(2:3) - (trail-1)*trail_length - 1;
+trail_ch_pos = trail_ch_pos - (trail-1)*trail_length - 1;
 
-figure, hold on; title('normalized joint torque');
+trail_time = 0:0.02:0.02*(length(trail_data)-1);
+
+figure, hold on; title('normalized joint data');
 set(gca, 'FontSize', 20);
 axis tight
-surf(trail_time, 1:size(trail_desired_joint_torque, 1), trail_desired_joint_torque);
-set(gca, 'YTick', 1:size(trail_desired_joint_torque, 1), ...
-    'YTickLabel', 1:size(trail_desired_joint_torque, 1));
+surf(trail_time, 1:size(trail_data, 1), trail_data);
+set(gca, 'YTick', 1:size(trail_data, 1), ...
+    'YTickLabel', {'torque1','torque2','torque3','torque4',...
+                   'position1','position2','position3','position4',...
+                   'torque''1','torque''2','torque''3','torque''4',...
+                   'velocity1','velocity2','velocity3','velocity4'});
+set(gca, 'YDir','reverse')
 colorbar
 shading interp
 for i = 1 : length(trail_ch_pos)
     a = trail_time(trail_ch_pos(i));
-    geoshow([1 size(trail_desired_joint_torque, 1); ...
-        1 size(trail_desired_joint_torque, 1)], [a a; a a], [0 0; 1 1], ...
-        'displaytype','mesh','facecolor','red','facealpha',0.5);
-end
-
-figure, hold on; title('normalized joint position');
-set(gca, 'FontSize', 20);
-axis tight
-surf(trail_time, 1:size(trail_desired_joint_torque, 1), trail_real_joint_position);
-set(gca, 'YTick', 1:size(trail_desired_joint_torque, 1),...
-    'YTickLabel', 1:size(trail_desired_joint_torque, 1));
-colorbar
-shading interp
-for i = 1 : length(trail_ch_pos)
-    a = trail_time(trail_ch_pos(i));
-    geoshow([1 size(trail_desired_joint_torque, 1);...
-        1 size(trail_desired_joint_torque, 1)], [a a; a a], [0 0; 1 1], ...
+    geoshow([1 size(trail_data, 1); ...
+        1 size(trail_data, 1)], [a a; a a], [0 0; 1 1], ...
         'displaytype','mesh','facecolor','red','facealpha',0.5);
 end
 
