@@ -216,7 +216,7 @@ def main():
 
     # grasp response test
     hand_controller.grasp_response_test()
-    sio.savemat('data/grasp_response' + datetime.now().strftime('%Y_%m_%d_%H.%M.%S') + '.mat',
+    sio.savemat('data/two_finger_pick_place/grasp_response_' + datetime.now().strftime('%Y_%m_%d_%H.%M.%S') + '.mat',
                 {'desired_joint_position': hand_controller.log_desired_joint_position,
                  'real_joint_position': hand_controller.log_real_joint_position,
                  'desired_joint_torque': hand_controller.log_desired_joint_torque,

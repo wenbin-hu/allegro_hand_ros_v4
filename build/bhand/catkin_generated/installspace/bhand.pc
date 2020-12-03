@@ -1,0 +1,8 @@
+prefix=/home/wenbin/allegro_hand_ros_v4/install
+
+Name: bhand
+Description: Description of bhand
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib -lBHand
+Requires: 

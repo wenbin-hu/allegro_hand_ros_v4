@@ -1,0 +1,2 @@
+allegro_hand:allegro_hand_controllers:allegro_hand_description:allegro_hand_driver:allegro_hand_keyboard:allegro_hand_parameters:bhand
+-DCATKIN_DEVEL_PREFIX=/home/wenbin/allegro_hand_ros_v4/devel -DCMAKE_INSTALL_PREFIX=/home/wenbin/allegro_hand_ros_v4/install -G Unix Makefiles
