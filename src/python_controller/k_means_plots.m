@@ -3,8 +3,8 @@ clear;
 clc;
 % close all;
 % load('data/grasp_response2020_11_12_15.52.30.mat');
-raw_data = load('data/two_finger_pinch_sliding/merged_two_finger_pinch_sliding_with_gradient.mat');
-% raw_data = load('data/two_finger_pinch/merged_two_finger_pinch_with_gradient.mat');
+% raw_data = load('data/two_finger_pinch_sliding/merged_two_finger_pinch_sliding_with_gradient.mat');
+raw_data = load('data/two_finger_pinch/merged_two_finger_pinch_with_gradient.mat');
 trail_length = 400; % every trail has 400 time-steps
 
 %% for three-fingered grasp, drop out the data of little finger
@@ -37,10 +37,9 @@ for i = 1:numel(data_name_list)
     assignin('caller', data_name_list{i}, raw_data.(data_name_list{i}));
 end
 
-%% clustering the data with k-means
+%% prepare the data
 dt = 0.02;
 time_window = 0.1 / dt;
-num_cluster = 4;
 
 % torque, position, torque', position'
 data = zeros(size(desired_joint_torque,1)*time_window*4, ...
@@ -59,6 +58,8 @@ for i = 1 : size(desired_joint_torque,2)/trail_length
 end
 data = data';
 
+%% clustering the data with k-means
+num_cluster = 4;
 [idx, cluster_centre, sum_distance, distance] = kmeans(data, num_cluster,... 
                           'Display', 'final',...
                           'Distance', 'sqeuclidean',...
@@ -252,3 +253,54 @@ plot(sum_error,'-o','MarkerFaceColor','b','LineWidth',2);
 set(gca, 'FontSize', 20);
 xlabel('number of clusters');
 ylabel('sum of error');
+
+%% compute the distances between clusters
+max_cluster_num = 5;
+dist_between_cluster = cell(1, max_cluster_num);
+for num_cluster = 2:max_cluster_num
+    [idx, cluster_centre, ~, ~] = kmeans(data, num_cluster,... 
+                          'Display', 'final',...
+                          'Distance', 'sqeuclidean',...
+                          'MaxIter', 100,...
+                          'OnlinePhase', 'On',...
+                          'Replicates', 10,...
+                          'Start', 'plus');
+    data_cluster = cell(1, num_cluster);
+    for i = 1:num_cluster
+        data_cluster{i} = data(find(idx==i), :);
+    end
+    dis_bet_clus = zeros(1, num_cluster);
+    for i = 1:num_cluster
+        min_dist_nb = 1e+3;
+        for j = 1:num_cluster
+            if i == j
+                continue
+            else
+                % data_cluster{i}(idx_i, :) is the point in cluster i which
+                % is nearest to cluster j
+                [~, idx_i] = min(vecnorm((data_cluster{i} - cluster_centre(j,:))'));
+                % data_cluster{j}(idx_j, :) is the point in cluster j which
+                % is nearest to cluster i
+                [~, idx_j] = min(vecnorm((data_cluster{j} - cluster_centre(i,:))'));               
+                dist_ij = norm(data_cluster{i}(idx_i, :) - data_cluster{j}(idx_j, :));
+                if dist_ij < min_dist_nb
+                    min_dist_nb = dist_ij;
+                end
+            end
+        end
+        dis_bet_clus(i) = min_dist_nb;
+    end
+    dist_between_cluster{num_cluster} = dis_bet_clus;
+end
+
+%%
+clc
+for i = 2:size(dist_between_cluster, 2)
+    disp(dist_between_cluster{i});
+%     disp(sum(dist_between_cluster{i}));
+end
+%%
+% clc
+for i = 2:size(dist_between_cluster, 2)
+    disp(sum(dist_between_cluster{i}));
+end
