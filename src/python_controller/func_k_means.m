@@ -1,4 +1,4 @@
-function [dist_between_cluster] = func_k_means_state(num_state, state_input)
+function [dist_between_cluster, sil_width, dunn] = func_k_means(num_state, state_input, max_cluster_num)
 %% load the data file
 % close all;
 % load('data/grasp_response2020_11_12_15.52.30.mat');
@@ -74,7 +74,7 @@ elseif num_state == 3
         data_1 = desired_joint_torque_gradient;
         data_2 = real_joint_velocity;
     end
-    % torque, position, torque', position'    
+    % 3 state kinds combination
     for i = 1 : size(desired_joint_torque,2)/trail_length
         for j = 1 : trail_length-time_window+1
             idx_s = (i-1) * trail_length + j;
@@ -89,9 +89,11 @@ end
 data = data';
 
 %% compute the distances between clusters
-max_cluster_num = 5;
+% max_cluster_num = 5;
 % dist_between_cluster = cell(1, max_cluster_num);
 dist_between_cluster = zeros(max_cluster_num-1, max_cluster_num);
+sil_width = zeros(max_cluster_num-1, 1);
+dunn = zeros(max_cluster_num-1, 1);
 for num_cluster = 2:max_cluster_num
     [idx, cluster_centre, ~, ~] = kmeans(data, num_cluster,... 
                           'Display', 'off',...
@@ -104,6 +106,8 @@ for num_cluster = 2:max_cluster_num
     for i = 1:num_cluster
         data_cluster{i} = data(find(idx==i), :);
     end
+    
+    % compute the intercluster distances
     dis_bet_clus = zeros(1, num_cluster);
     for i = 1:num_cluster
         min_dist_nb = 1e+3;
@@ -127,6 +131,44 @@ for num_cluster = 2:max_cluster_num
     end
 %     dist_between_cluster{num_cluster} = dis_bet_clus;
     dist_between_cluster(num_cluster-1, 1:num_cluster) = dis_bet_clus;
+    
+    % compute the Silhouette width
+%     sil_sum = zeros(1, num_cluster);
+%     for i = 1:num_cluster
+%         for j = 1:size(data_cluster{i}, 1)
+%             tempA = data_cluster{i};
+%             tempA(j,:) = [];
+%             a_j = mean(vecnorm((data_cluster{i}(j, :) - tempA)'), 2);
+%             % find out which cluster is the nearest to point j
+%             % initialize the index for nearest cluster
+%             idx_nst = 0;
+%             dist_nst = 100;
+%             for k = 1:num_cluster
+%                 if k == i
+%                     continue
+%                 end
+%                 if min(vecnorm((data_cluster{i}(j, :) - data_cluster{k})')) < dist_nst
+%                     dist_nst = min(vecnorm((data_cluster{i}(j, :) - data_cluster{k})'));
+%                     idx_nst = k;
+%                 end
+%             end
+%             % compute b_j
+%             b_j = mean(vecnorm((data_cluster{i}(j, :) - ...
+%                                  data_cluster{idx_nst})'), 2);
+%             % compute S_j
+%             S_j = (b_j - a_j) / max(b_j, a_j);
+%             sil_sum(i) = sil_sum(i) + S_j;
+%         end
+%     end
+%     sil_width(num_cluster-1) = sum(sil_sum) / size(data, 1);
+    
+    % Silhouette width (MATLAB version)
+    sil_vec = silhouette(data, idx, 'Euclidean');
+    sil_width(num_cluster-1) = mean(sil_vec);
+
+    % Dunn index from online forum
+    distM = squareform(pdist(data));
+    dunn(num_cluster-1) = dunns(num_cluster, distM, idx);
 end
 
 end
